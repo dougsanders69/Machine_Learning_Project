@@ -1,0 +1,111 @@
+---
+title: "Machine Learning Project"
+author: "Doug Sanders"
+date: "June 20, 2015"
+output: html_document
+---
+**Required Packages and data loaded in.**
+
+
+```{r, results='hide', message=FALSE}
+setwd("~/Coursera/MachineLearning/project")
+library(xtable); library(ggplot2); library(reshape); library(caret); library(kernlab); library(randomForest)
+library(doParallel)
+data <- read.csv("pml-training.csv")
+data_test <- read.csv("pml-testing.csv")
+registerDoParallel(cores=2)
+```
+## **Predictor Selection**
+
+Upon examination of the data, many of the columns have missing values ("NA", "" etc).  In all cases considered here the number of missing values was much greater than half (>90% ) so those columns were discarded.  Additinally, columns that identify non-physical quantities (time, user_name, window etc)  were also removed for training.  In practice, the desired colums were obtained using the grep statements below which first select desired column names (gyro, accel, pitch etc) and then remove undesired ones. 
+
+```{r, echo=T}
+Names_keep_1 <- colnames(data)[grep("gyros|accel|magnet|pitch|roll|yaw|picth", colnames(data))]
+Names_keep_2 <- Names_keep_1[-grep("avg|max|min|var|stddev|skewness|amplitude|skewness|kurtosis", Names_keep_1)]
+```
+## **Data Partitioning**
+
+Here 40% of the data is set aside for a final test of the model to evaluate against its out of sample error.  80% of the remaining data is used for training.  In this way 48% (0.8*0.6 = 48%) of the data is used repeatedly to try different training controls, removal of predictors etc and compared against (0.2*0.6 = 12% ) of the data for iterative evaluation.   
+
+```{r, echo=T}
+set.seed(8484)
+
+inTrain_F <- createDataPartition(y=data$classe, p=0.6, list=F)
+final_test_data <- data[ -inTrain_F,]
+model_building_data <- data[ inTrain_F , c("classe" , Names_keep_2)]
+inTrain <- createDataPartition(y=model_building_data$classe, p=0.6, list=F)
+Training_data <- model_building_data[inTrain ,]; Testing_data <- model_building_data[-inTrain ,]
+```
+Many of the predictors are highly correlated with each other.  Here 14 predictors are removed using cutoff > 80%.
+That leaves 38 columns of predictors.
+
+```{r, echo=T}
+drops <- c("classe"); drops2 <- c("user_name", "classe")
+sub_data <- Training_data[ ,!(names(Training_data) %in% drops)]; col_sub_data <- colnames(sub_data)
+M <- abs(cor(sub_data))
+sub_data <- sub_data[ , -findCorrelation(M, cutoff= .8 )]
+Training_data <- cbind(Training_data$classe, sub_data)
+colnames(Training_data) <- c("classe", colnames(sub_data))
+```
+More investigation was done to remove predictors and some models were found that gave reasonable results using less than 20 predictors and less than half the cpu time but also showed a small but measureable decrease in accuracy when compared against the Testing data (Note: the final test data was not used in this process)
+
+Training control parameters are implemented here.   6 Kfolds are used with the repeatedcv method.
+```{r, echo=F, eval=FALSE}
+# and one more partition just for computational speed
+inTrain_s <- createDataPartition(y=Training_data$classe, p=0.2, list=F)
+inTrain_s <- inTrain
+```
+```{r, echo=T, eval=FALSE}
+Folds <- createFolds(y=Training_data[inTrain_s,]$classe, k=6 )
+
+ctrl <- trainControl(method = "repeatedcv", repeats = 6, number = 6, classProbs = T, index = Folds)
+
+modelFit <- train(classe ~ ., method = "rf", 
+        trainControl = ctrl, data = Training_data[inTrain_s,], parallel = T)
+```
+```{r, echo=F, eval=T}
+# save(modelFit, file="fit_at_60of60")
+ load("fit_at_60of60")
+```
+Here is an estimate (internal to the fit) for the confusion table for the final model.
+
+```{r, echo=F}
+modelFit$finalModel
+
+```
+## **Out of Sample Error Estimate and Cross Validation**
+
+Here we compare the model using two sets of test data, the first set was used iteratively to check the relative performance of choices for the model (Testing_data - the "testing" part of the "model_building_data"), and the second set ("final_test_data") was set aside at the beginning and only used here to provide a cross-validation estimate of the out of sample error.  In this context, out of sample is taken to simply mean not used in any of the modelfitting process.  However it is duly noted that one could consider out of sample to mean a new user where this could be evaluated by fitting 6 models, each one with data from all users except one then that model used to predict against the missing users data.  Attempts at this were made but the models provided poor results when used to predict against a user_name whose data was completely removed from the data used to create the prediction model.  Although better results for this could likely be achieved (as evidenced by the paper "Qualitative Activity Recognition of Weight Lifting Exercises") it clearly indicates that the model used here is biased to the users data that was used in the model fitting process and would not perform nearly as well in the "out of sample" sense if that sample were data from a new subject.
+
+```{r, echo=T}
+
+data_temp_test <- Testing_data
+
+plot_confusion1 <- confusionMatrix(predict(modelFit, data_temp_test) , data_temp_test$classe )
+
+data_temp_test <- final_test_data[ , colnames(Training_data) ]
+
+plot_confusion2 <- confusionMatrix(predict(modelFit, data_temp_test) , data_temp_test$classe )
+
+```
+
+```{r, echo=F}
+confusion1 <- as.table(prop.table(plot_confusion1$table, margin = 2))
+round(plot_confusion1$overall, 3)
+round(confusion1, 3)
+
+
+
+confusion2 <- as.table(prop.table(plot_confusion2$table, margin = 2))
+round(plot_confusion2$overall, 3)
+round(confusion2, 3)
+
+```
+
+```{r, echo=FALSE, results='markup'}
+# xt1 <- xtable(c1, caption = "Confustion matrix vs test data", digits=3)
+# xt2 <- xtable(c2, caption = "Confustion matrix vs Final test data", digits=3)
+# ?xtable
+#print.table(c1)
+#print(xt1, type="html"); print(xt2, type = "html")
+```
