@@ -107,12 +107,21 @@ ctrl &lt;- trainControl(method = &quot;repeatedcv&quot;, repeats = 6, number = 6
 modelFit &lt;- train(classe ~ ., method = &quot;rf&quot;, 
         trainControl = ctrl, data = Training_data[inTrain_s,], parallel = T)</code></pre>
 <p>Here is an estimate (internal to the fit) for the confusion table for the final model.</p>
-<pre><code>##     A   B   C   D   E class.error
-## A 391   3   3   4   1  0.02736318
-## B  22 227  19   5   1  0.17153285
-## C   1  12 229   4   1  0.07287449
-## D   2   2  13 210   5  0.09482759
-## E   0   5   8   3 244  0.06153846</code></pre>
+<pre><code>## 
+## Call:
+##  randomForest(x = x, y = y, mtry = param$mtry, trainControl = ..1,      parallel = ..2) 
+##                Type of random forest: classification
+##                      Number of trees: 500
+## No. of variables tried at each split: 20
+## 
+##         OOB estimate of  error rate: 2.78%
+## Confusion matrix:
+##      A   B   C   D   E class.error
+## A 1202   4   2   2   1 0.007431874
+## B   21 783   9   4   1 0.042787286
+## C    0  25 692  10   1 0.049450549
+## D    0   2  16 678   3 0.030042918
+## E    0   4   6   7 779 0.021356784</code></pre>
 </div>
 <div id="out-of-sample-error-estimate-and-cross-validation" class="section level2">
 <h2><strong>Out of Sample Error Estimate and Cross Validation</strong></h2>
@@ -125,30 +134,27 @@ data_temp_test &lt;- final_test_data[ , colnames(Training_data) ]
 
 plot_confusion2 &lt;- confusionMatrix(predict(modelFit, data_temp_test) , data_temp_test$classe )</code></pre>
 <pre><code>##       Accuracy          Kappa  AccuracyLower  AccuracyUpper   AccuracyNull 
-##          0.930          0.911          0.922          0.937          0.284 
+##          0.968          0.960          0.963          0.973          0.284 
 ## AccuracyPValue  McnemarPValue 
-##          0.000          0.000</code></pre>
+##          0.000            NaN</code></pre>
 <pre><code>##           Reference
 ## Prediction     A     B     C     D     E
-##          A 0.981 0.058 0.000 0.000 0.000
-##          B 0.009 0.867 0.082 0.003 0.022
-##          C 0.005 0.052 0.907 0.066 0.014
-##          D 0.002 0.020 0.011 0.921 0.018
-##          E 0.002 0.003 0.000 0.010 0.946</code></pre>
+##          A 0.990 0.022 0.000 0.003 0.001
+##          B 0.007 0.945 0.033 0.000 0.006
+##          C 0.000 0.029 0.945 0.031 0.003
+##          D 0.001 0.004 0.018 0.965 0.006
+##          E 0.002 0.000 0.004 0.001 0.984</code></pre>
 <pre><code>##       Accuracy          Kappa  AccuracyLower  AccuracyUpper   AccuracyNull 
-##          0.922          0.902          0.916          0.928          0.284 
+##          0.971          0.963          0.967          0.975          0.284 
 ## AccuracyPValue  McnemarPValue 
-##          0.000          0.000</code></pre>
+##          0.000            NaN</code></pre>
 <pre><code>##           Reference
 ## Prediction     A     B     C     D     E
-##          A 0.984 0.075 0.000 0.002 0.003
-##          B 0.004 0.844 0.079 0.005 0.022
-##          C 0.007 0.060 0.912 0.079 0.016
-##          D 0.003 0.016 0.007 0.899 0.019
-##          E 0.001 0.005 0.002 0.016 0.940</code></pre>
-</div>
-<div id="r-echofalse" class="section level1">
-<h1>```{r, echo=FALSE}</h1>
+##          A 0.997 0.032 0.000 0.002 0.000
+##          B 0.003 0.937 0.026 0.001 0.004
+##          C 0.000 0.022 0.958 0.034 0.001
+##          D 0.000 0.003 0.012 0.960 0.006
+##          E 0.000 0.006 0.004 0.003 0.989</code></pre>
 </div>
 
 

@@ -64,14 +64,13 @@ modelFit <- train(classe ~ ., method = "rf",
         trainControl = ctrl, data = Training_data[inTrain_s,], parallel = T)
 ```
 ```{r, echo=F, eval=T}
-# save(modelFit, file="fit_at_20of60of60")
- load("fit_at_20of60of60")
+# save(modelFit, file="fit_at_60of60")
+ load("fit_at_60of60")
 ```
 Here is an estimate (internal to the fit) for the confusion table for the final model.
 
 ```{r, echo=F}
-
-modelFit$finalModel$confusion
+modelFit$finalModel
 
 ```
 ## **Out of Sample Error Estimate and Cross Validation**
